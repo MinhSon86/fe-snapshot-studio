@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FE Snapshot Studio</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%237c6cff'/%3E%3Cpath d='M9 11h14M9 16h9M9 21h11' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <!-- ============ HOME ============ -->
+  <div id="home" class="screen">
+    <div class="home-inner">
+      <header class="home-header">
+        <div class="logo"><span class="logo-mark"></span>FE Snapshot Studio</div>
+        <p class="tagline">Chụp bất kỳ giao diện web nào (URL hoặc thư mục mã nguồn) → kéo thả, đổi màu, sửa chữ để dựng giao diện demo.</p>
+      </header>
+      <section class="start-grid">
+        <button class="start-card" data-start="url">
+          <span class="sc-icon" data-icon="globe"></span>
+          <b>Chụp từ URL</b><small>Nhập địa chỉ trang web bất kỳ</small>
+        </button>
+        <button class="start-card" data-start="folder">
+          <span class="sc-icon" data-icon="folder"></span>
+          <b>Mở thư mục mã nguồn</b><small>Tự nhận diện, cài công cụ & chạy dự án</small>
+        </button>
+        <button class="start-card" data-start="blank">
+          <span class="sc-icon" data-icon="file"></span>
+          <b>Trang trắng</b><small>Tự dựng từ các khối có sẵn</small>
+        </button>
+        <button class="start-card" data-start="import">
+          <span class="sc-icon" data-icon="upload"></span>
+          <b>Mở file .fesnap</b><small>Project mang từ máy khác sang</small>
+        </button>
+      </section>
+      <h3 class="section-title">Project gần đây</h3>
+      <section id="project-list" class="project-grid"></section>
+    </div>
+  </div>
+
+  <!-- ============ EDITOR ============ -->
+  <div id="editor" class="screen hidden">
+    <header class="topbar">
+      <button class="icon-btn" id="btn-home" title="Về trang chủ" data-icon="home"></button>
+      <input id="project-name" class="project-name" spellcheck="false">
+      <div class="tb-group">
+        <button class="icon-btn" id="btn-undo" title="Hoàn tác (Ctrl+Z)" data-icon="undo"></button>
+        <button class="icon-btn" id="btn-redo" title="Làm lại (Ctrl+Shift+Z)" data-icon="redo"></button>
+      </div>
+      <div class="tb-group" id="viewport-group">
+        <button class="icon-btn" data-vp="1440" title="Desktop 1440" data-icon="monitor"></button>
+        <button class="icon-btn" data-vp="1024" title="Laptop / Tablet ngang 1024" data-icon="laptop"></button>
+        <button class="icon-btn" data-vp="768" title="Tablet 768" data-icon="tablet"></button>
+        <button class="icon-btn" data-vp="390" title="Mobile 390" data-icon="phone"></button>
+        <input id="vp-width" class="num-input" title="Chiều rộng khung (px)">
+      </div>
+      <div class="tb-group">
+        <select id="zoom" title="Thu phóng">
+          <option value="fit">Vừa khung</option>
+          <option value="0.25">25%</option><option value="0.5">50%</option><option value="0.75">75%</option>
+          <option value="1">100%</option><option value="1.5">150%</option>
+        </select>
+      </div>
+      <div class="spacer"></div>
+      <span id="save-state" class="save-state"></span>
+      <button class="btn ghost" id="btn-preview"><span data-icon="eye"></span>Xem trước</button>
+      <div class="dropdown">
+        <button class="btn primary" id="btn-export"><span data-icon="download"></span>Xuất</button>
+        <div class="dropdown-menu" id="export-menu">
+          <button data-export="html">Trang hiện tại → HTML</button>
+          <button data-export="png">Trang hiện tại → Ảnh PNG</button>
+          <button data-export="fesnap">Cả project → .fesnap (mang sang máy khác)</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <aside class="left-panel">
+        <nav class="tabs" id="left-tabs">
+          <button data-tab="pages" class="active">Trang</button>
+          <button data-tab="layers">Lớp</button>
+          <button data-tab="insert">Chèn</button>
+          <button data-tab="theme">Theme</button>
+        </nav>
+        <div class="tab-body" id="tab-pages"></div>
+        <div class="tab-body hidden" id="tab-layers"></div>
+        <div class="tab-body hidden" id="tab-insert"></div>
+        <div class="tab-body hidden" id="tab-theme"></div>
+      </aside>
+
+      <main class="canvas-area" id="canvas-area">
+        <div class="stage" id="stage">
+          <div class="frame-wrap" id="frame-wrap"><iframe id="frame" title="canvas"></iframe></div>
+          <div class="overlay" id="overlay">
+            <div class="ov-box ov-hover" id="ov-hover"></div>
+            <div class="ov-box ov-select" id="ov-select">
+              <div class="ov-label" id="ov-label"></div>
+              <div class="ov-handle h-e" data-handle="e"></div>
+              <div class="ov-handle h-s" data-handle="s"></div>
+              <div class="ov-handle h-se" data-handle="se"></div>
+            </div>
+            <div class="ov-drop" id="ov-drop"></div>
+            <div class="ov-toolbar" id="ov-toolbar">
+              <button data-act="parent" title="Chọn phần tử cha (Esc)" data-icon="arrowUpLeft"></button>
+              <button data-act="drag" title="Kéo để di chuyển" data-icon="move" class="drag-handle"></button>
+              <button data-act="up" title="Lên trước (Alt+↑)" data-icon="chevronUp"></button>
+              <button data-act="down" title="Xuống sau (Alt+↓)" data-icon="chevronDown"></button>
+              <button data-act="duplicate" title="Nhân bản (Ctrl+D)" data-icon="copy"></button>
+              <button data-act="component" title="Lưu thành component" data-icon="star"></button>
+              <button data-act="delete" title="Xoá (Delete)" data-icon="trash" class="danger"></button>
+            </div>
+          </div>
+          <div class="shield hidden" id="shield"></div>
+        </div>
+        <div class="canvas-empty hidden" id="canvas-empty">Chưa có trang nào</div>
+      </main>
+
+      <aside class="right-panel" id="inspector"></aside>
+    </div>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast-root"></div>
+  <div id="ctx-menu" class="ctx-menu hidden"></div>
+  <input type="file" id="file-import" accept=".fesnap,application/json" hidden>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
