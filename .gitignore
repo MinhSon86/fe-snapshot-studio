@@ -1,4 +1,6 @@
 node_modules/
+.tools/
+/FE Snapshot Studio.lnk
 data/
 scratch/
 *.log

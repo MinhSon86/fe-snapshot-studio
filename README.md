@@ -1,12 +1,16 @@
 # FE Snapshot Studio
 
+<img src="public/assets/logo.svg" alt="FE Snapshot Studio — Capture. Edit. Create." width="456">
+
+**Máy mới sau khi clone:** Windows mở `setup.bat` rồi `start.bat`; macOS/Linux chạy `bash setup.sh` rồi `bash start.sh`. Dùng `check.bat` / `bash check.sh` để kiểm tra hệ thống. Nếu thiếu Node, setup tự tải bản portable vào thư mục dự án. Xem [hướng dẫn cài đặt](SETUP.md).
+
 ## Không gian chỉnh sửa gọn hơn
 
 - Thanh công cụ chia nhóm dự án/xuất file và nhóm khung nhìn; nút tự xuống hàng khi không đủ chỗ.
 - Bấm **Danh mục** hoặc **Thuộc tính** để thu gọn/mở lại từng panel. **Tập trung** ẩn cả hai; bấm lại khôi phục bố cục trước đó. Studio nhớ lựa chọn hiển thị trên trình duyệt giao diện.
 - Các nhóm thuộc tính, Theme và Chèn có thể thu gọn. Các tùy chọn sửa HTML/lưu khối mẫu nằm trong **Nâng cao**; đổi profile nằm trong **Profile & đăng nhập** của hộp chụp.
 - Rê chuột hoặc dùng Tab để xem tooltip giải thích chức năng. Escape đóng tooltip hoặc menu xuất file đang mở.
-- Kiểm tra đầy đủ: `node --test tests/browser-sessions.test.mjs tests/capture-project.test.mjs tests/viewport.test.mjs tests/workspace-ui.test.mjs`.
+- Kiểm tra đầy đủ: `node --test --test-timeout=90000 tests/bootstrap.test.mjs tests/browser-sessions.test.mjs tests/capture-project.test.mjs tests/viewport.test.mjs tests/workspace-ui.test.mjs`.
 
 ## Khung nhìn lớn và thao tác nhanh
 
@@ -53,16 +57,16 @@ Công cụ biến bất kỳ giao diện web nào (từ địa chỉ **URL** ho�
 
 ## Cài đặt & Khởi chạy
 
-Yêu cầu: **Node.js >= 18**.
+Yêu cầu: **Node.js >= 20**, hoặc dùng file setup để tự chuẩn bị Node portable.
 
 ### Cách 1: Chạy nhanh
-- **Windows:** Nhấp đúp vào `start.bat`
-- **macOS / Linux:** Chạy `./start.sh`
+- **Windows:** Nhấp đúp `setup.bat`, sau đó `start.bat` hoặc shortcut có logo **FE Snapshot Studio**.
+- **macOS / Linux:** Chạy `bash setup.sh`, sau đó `bash start.sh`. macOS có thêm `start.command` để nhấp đúp sau lần setup đầu.
 
 ### Cách 2: Chạy bằng dòng lệnh
 ```bash
-npm install
+npm run setup
 npm start
 ```
 
-Ứng dụng sẽ tự động mở tại `http://localhost:5178` (lần đầu chụp giao diện, nếu máy chưa có Chromium của Playwright, hệ thống sẽ tự động tải về).
+Trước khi khởi chạy, launcher kiểm tra thư viện và Chromium, tự cài phần còn thiếu. Ứng dụng tự mở tại `http://localhost:5178`; nếu cổng bận sẽ chọn cổng tiếp theo. Xem [SETUP.md](SETUP.md) để kiểm tra hệ thống, chạy không mở trình duyệt hoặc xử lý lỗi cài đặt.
