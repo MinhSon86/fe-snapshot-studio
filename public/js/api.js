@@ -15,6 +15,12 @@ async function req(method, url, body, asBlob) {
 
 export const api = {
   capture: (opts) => req('POST', '/api/capture', opts),
+  browserProfiles: () => req('GET', '/api/browser/profiles'),
+  activeBrowserSession: (profile) => req('GET', '/api/browser/sessions?profile=' + encodeURIComponent(profile || 'studio')),
+  openBrowserSession: (opts) => req('POST', '/api/browser/sessions', opts),
+  browserSession: (id) => req('GET', `/api/browser/sessions/${encodeURIComponent(id)}`),
+  captureBrowserSession: (id, tabId) => req('POST', `/api/browser/sessions/${encodeURIComponent(id)}/capture`, { tabId }),
+  closeBrowserSession: (id) => req('POST', `/api/browser/sessions/${encodeURIComponent(id)}/close`, {}),
   exportPng: (opts) => req('POST', '/api/export/png', opts, true),
   fontCss: (family) => req('GET', '/api/font-css?family=' + encodeURIComponent(family)),
   listDir: (path) => req('GET', '/api/fs/list?path=' + encodeURIComponent(path || '')),

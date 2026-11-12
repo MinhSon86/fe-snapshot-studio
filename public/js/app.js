@@ -3,10 +3,13 @@
 
 import { h, icon, hydrateIcons, modal, prompt, confirmBox, toast, debounce, download, timeAgo, formatBytes } from './ui.js';
 import { api } from './api.js';
+import { openCaptureDialog } from './capture-dialog.js';
 import { Canvas } from './canvas.js';
 import { Inspector } from './inspector.js';
 import { LeftPanels } from './panels.js';
 import { BLANK_PAGE_HTML } from './blocks.js';
+import { VIEWPORT_PRESETS, validateViewportWidth } from './viewport.js';
+import { setupWorkspace } from './workspace-ui.js';
 
 class App {
   constructor() {
@@ -51,6 +54,7 @@ class App {
 
     this.scheduleSave = debounce(() => this.saveCurrentProject(), 900);
     this.bindEvents();
+    setupWorkspace(this.canvas);
     hydrateIcons();
     this.refreshHome();
   }
@@ -78,12 +82,34 @@ class App {
       b.onclick = () => this.canvas.setViewport(Number(b.dataset.vp));
     });
     this.vpInput.onchange = () => this.canvas.setViewport(Number(this.vpInput.value) || 1440);
+    document.getElementById('vp-preset').onchange = (event) => {
+      if (event.target.value === 'custom') { this.vpInput.focus(); this.vpInput.select(); }
+      else this.canvas.setViewport(Number(event.target.value));
+    };
+    document.getElementById('btn-capture-url').onclick = () => this.openCaptureUrlModal({ createNewProject: false });
     this.zoomSelect.onchange = () => this.canvas.setZoom(this.zoomSelect.value);
 
     const expBtn = document.getElementById('btn-export');
     const expMenu = document.getElementById('export-menu');
-    expBtn.onclick = (e) => { e.stopPropagation(); expMenu.classList.toggle('open'); };
-    window.addEventListener('click', () => expMenu.classList.remove('open'));
+    const closeExport = () => { expMenu.classList.remove('open'); expBtn.setAttribute('aria-expanded', 'false'); };
+    expBtn.onclick = (e) => {
+      e.stopPropagation();
+      expMenu.classList.toggle('open');
+      expBtn.setAttribute('aria-expanded', String(expMenu.classList.contains('open')));
+      if (expMenu.classList.contains('open')) {
+        const rect = expBtn.getBoundingClientRect();
+        Object.assign(expMenu.style, {
+          position: 'fixed', right: 'auto',
+          left: Math.max(8, Math.min(innerWidth - expMenu.offsetWidth - 8, rect.right - expMenu.offsetWidth)) + 'px',
+          top: rect.bottom + 6 + 'px', maxHeight: Math.max(80, innerHeight - rect.bottom - 14) + 'px', overflowY: 'auto',
+        });
+      }
+    };
+    window.addEventListener('click', closeExport);
+    window.addEventListener('resize', closeExport);
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && expMenu.classList.contains('open')) { closeExport(); expBtn.focus(); event.stopImmediatePropagation(); }
+    }, true);
     expMenu.querySelectorAll('[data-export]').forEach((b) => {
       b.onclick = () => this.handleExport(b.dataset.export);
     });
@@ -120,6 +146,11 @@ class App {
 
     this.canvas.on('viewport', (w) => {
       this.vpInput.value = w;
+      document.getElementById('vp-preset').value = VIEWPORT_PRESETS.includes(w) ? String(w) : 'custom';
+      if (this.project?.pages[this.pageIndex]) {
+        this.project.pages[this.pageIndex].width = w;
+        this.scheduleSave();
+      }
       document.querySelectorAll('#viewport-group button[data-vp]').forEach((b) => {
         b.classList.toggle('active', Number(b.dataset.vp) === w);
       });
@@ -213,19 +244,21 @@ class App {
     this.project = proj;
     this.nameInput.value = proj.name || 'Không tên';
     this.showEditor();
-    await this.selectPage(0);
+    await this.selectPage(0, { savePrevious: false });
     this.panels.renderPages();
   }
 
-  async selectPage(idx) {
+  async selectPage(idx, { savePrevious = true } = {}) {
     if (!this.project || !this.project.pages[idx]) return;
-    if (this.canvas.doc && this.project.pages[this.pageIndex]) {
+    if (savePrevious && this.canvas.doc && this.project.pages[this.pageIndex]) {
       this.project.pages[this.pageIndex].html = this.canvas.serialize();
     }
     this.pageIndex = idx;
     const page = this.project.pages[idx];
     const width = page.width || 1440;
     this.vpInput.value = width;
+    const preset = document.getElementById('vp-preset');
+    if (preset) preset.value = VIEWPORT_PRESETS.includes(width) ? String(width) : 'custom';
     await this.canvas.load(page.html, { width });
     this.panels.renderPages();
   }
@@ -288,48 +321,15 @@ class App {
 
   /* ---------------- URL Snapshot Modal ---------------- */
   openCaptureUrlModal({ createNewProject }) {
-    const urlIn = h('input', { class: 'txt', placeholder: 'https://example.com hoặc http://localhost:3000', value: 'https://example.com' });
-    const vpSel = h('select', { style: { height: '36px' } },
-      h('option', { value: '1440' }, 'Desktop (1440px)'),
-      h('option', { value: '1024' }, 'Laptop (1024px)'),
-      h('option', { value: '768' }, 'Tablet (768px)'),
-      h('option', { value: '390' }, 'Mobile (390px)'));
-    const statusBox = h('div', { class: 'busy hidden' }, h('span', { class: 'spinner' }), h('span', {}, 'Đang tải và chụp giao diện... (có thể mất 5–15 giây)'));
-
-    const doCapture = async (close) => {
-      const url = urlIn.value.trim();
-      if (!url) return;
-      statusBox.classList.remove('hidden');
-      try {
-        const res = await api.capture({ url, width: Number(vpSel.value) });
-        const page = { name: res.title || url, url: res.url, width: res.width, html: res.html, thumbnail: res.thumbnail };
-        close();
-        if (createNewProject) {
-          const meta = await api.saveProject({ name: res.title || url, pages: [page], components: [] });
-          await this.openProject(meta.id);
-        } else {
-          await this.addPageToCurrent(page);
-        }
-        toast('Đã chụp giao diện thành công!', 'ok');
-      } catch (e) {
-        statusBox.classList.add('hidden');
-        toast('Không chụp được URL: ' + e.message, 'error');
+    return openCaptureDialog(async (res) => {
+      const page = { name: res.title || res.url, url: res.url, width: res.width, html: res.html, thumbnail: res.thumbnail };
+      if (createNewProject) {
+        const meta = await api.saveProject({ name: page.name, pages: [page], components: [] });
+        await this.openProject(meta.id);
+      } else {
+        await this.addPageToCurrent(page);
       }
-    };
-
-    const m = modal({
-      title: 'Chụp giao diện từ địa chỉ URL',
-      body: h('div', {},
-        h('div', { class: 'form-row' }, h('label', {}, 'Địa chỉ trang web (URL công khai hoặc localhost)'), urlIn),
-        h('div', { class: 'form-row' }, h('label', {}, 'Kích thước màn hình khi chụp'), vpSel),
-        statusBox),
-      actions: [
-        { label: 'Huỷ' },
-        { label: 'Chụp giao diện', primary: true, onClick: doCapture },
-      ],
     });
-    urlIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') doCapture(m.close); });
-    setTimeout(() => { urlIn.focus(); urlIn.select(); }, 30);
   }
 
   /* ---------------- Source Folder Runner & Snapshot Modal ---------------- */
@@ -339,6 +339,7 @@ class App {
     const dirList = h('div', { class: 'dir-list' });
     const logBox = h('div', { class: 'log-box hidden' });
     const routeIn = h('input', { class: 'txt', value: '/', placeholder: '/ hoặc /dashboard' });
+    const captureWidthIn = h('input', { class: 'txt', type: 'number', min: 240, max: 7680, step: 1, value: 1920, 'aria-label': 'Chiều rộng chụp mã nguồn' });
     const statusLine = h('div', { style: { marginBottom: '8px' } });
     let activeJobId = null;
     let pollTimer = null;
@@ -375,6 +376,7 @@ class App {
       logBox.classList.remove('hidden');
       logBox.textContent = 'Đang khởi chạy...';
       try {
+        const captureWidth = validateViewportWidth(captureWidthIn.value);
         const job = await api.run(dir);
         activeJobId = job.id;
         pollTimer = setInterval(async () => {
@@ -390,10 +392,10 @@ class App {
               clearInterval(pollTimer);
               statusLine.innerHTML = `<span class="status-pill ready">Đang chụp giao diện từ ${j.url}...</span>`;
               const targetUrl = new URL(routeIn.value.trim() || '/', j.url).href;
-              const snap = await api.capture({ url: targetUrl, width: 1440 });
+              const snap = await api.capture({ url: targetUrl, width: captureWidth });
               stopRunner();
               const folderName = dir.split(/[\\/]/).filter(Boolean).pop() || 'Source Project';
-              const page = { name: snap.title || folderName, url: targetUrl, width: 1440, html: snap.html, thumbnail: snap.thumbnail };
+              const page = { name: snap.title || folderName, url: targetUrl, width: snap.width, html: snap.html, thumbnail: snap.thumbnail };
               close();
               if (createNewProject) {
                 const meta = await api.saveProject({ name: folderName, pages: [page], components: [] });
@@ -423,6 +425,7 @@ class App {
           detectBadge),
         h('div', { class: 'form-row' }, h('label', {}, 'Duyệt thư mục trên máy'), dirList),
         h('div', { class: 'form-row' }, h('label', {}, 'Đường dẫn trang cần chụp (Route)'), routeIn),
+        h('div', { class: 'form-row' }, h('label', {}, 'Chiều rộng khi chụp (240–7680px)'), captureWidthIn),
         statusLine,
         logBox),
       actions: [

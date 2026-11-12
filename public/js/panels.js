@@ -3,6 +3,7 @@
 
 import { h, icon, hydrateIcons, prompt, confirmBox, toast, parseRgb, rgbToHex, rgbKey } from './ui.js';
 import { BUILTIN_BLOCKS } from './blocks.js';
+import { collapseSections } from './workspace-ui.js';
 
 const SKIP_TAGS = new Set(['script', 'style', 'link', 'meta', 'template', 'noscript', 'title', 'head', 'base', 'br', 'path', 'g', 'defs', 'clippath', 'lineargradient', 'stop']);
 
@@ -25,6 +26,7 @@ export class LeftPanels {
     this.app = app;
     this.activeTab = 'pages';
     this.collapsed = new WeakSet();
+    this.sectionState = new Map();
 
     tabsNav.addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-tab]');
@@ -38,7 +40,7 @@ export class LeftPanels {
 
   switchTab(tab) {
     this.activeTab = tab;
-    this.tabsNav.querySelectorAll('button[data-tab]').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+    this.tabsNav.querySelectorAll('button[data-tab]').forEach((b) => { b.classList.toggle('active', b.dataset.tab === tab); b.setAttribute('aria-pressed', String(b.dataset.tab === tab)); });
     this.pagesEl.classList.toggle('hidden', tab !== 'pages');
     this.layersEl.classList.toggle('hidden', tab !== 'layers');
     this.insertEl.classList.toggle('hidden', tab !== 'insert');
@@ -57,7 +59,7 @@ export class LeftPanels {
 
     const top = h('div', { class: 'panel-section' },
       h('h4', {}, 'Danh sách trang (' + proj.pages.length + ')'),
-      h('div', { class: 'row', style: { marginBottom: 0 } },
+      h('div', { class: 'page-add-actions', style: { marginBottom: 0 } },
         h('button', { class: 'btn sm primary', onclick: () => this.app.openAddPageModal('url') }, h('span', { html: icon('globe') }), '+ URL'),
         h('button', { class: 'btn sm', onclick: () => this.app.openAddPageModal('folder') }, h('span', { html: icon('folder') }), '+ Mã nguồn'),
         h('button', { class: 'btn sm', onclick: () => this.app.addBlankPage() }, h('span', { html: icon('plus') }), '+ Trắng')));
@@ -212,6 +214,8 @@ export class LeftPanels {
         : h('div', { class: 'panel-hint', style: { padding: '4px 0' } },
           'Chọn một phần tử bất kỳ trên trang → nhấn biểu tượng ★ để lưu thành khối dùng lại.'));
     this.insertEl.append(customSec);
+    collapseSections(this.insertEl, this.sectionState, ['Khối giao diện (Kéo hoặc Nhấp)']);
+    hydrateIcons(this.insertEl);
   }
 
   /* ================== 4. THEME TAB ================== */
@@ -302,6 +306,7 @@ export class LeftPanels {
       }, 'Thay thế tất cả'));
     this.themeEl.append(repSec);
 
+    collapseSections(this.themeEl, this.sectionState, ['Bảng màu đang dùng trên trang']);
     hydrateIcons(this.themeEl);
   }
 

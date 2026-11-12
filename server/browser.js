@@ -40,6 +40,18 @@ export async function getBrowser() {
   return b;
 }
 
+export async function launchProfile(userDataDir, options = {}) {
+  // Let Chromium restore its own session data in the dedicated profile.
+  const settings = { headless: false, channel: 'chromium', ...options, args: ['--restore-last-session', ...(options.args || [])] };
+  try {
+    return await chromium.launchPersistentContext(userDataDir, settings);
+  } catch (e) {
+    if (!/Executable doesn't exist|playwright install/i.test(e.message)) throw e;
+    await installChromium();
+    return chromium.launchPersistentContext(userDataDir, settings);
+  }
+}
+
 export async function closeBrowser() {
   if (browserPromise) {
     try { (await browserPromise).close(); } catch { /* ignore */ }

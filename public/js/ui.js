@@ -1,4 +1,5 @@
 // Small UI helpers: element builder, icons, toast, modal, color utilities.
+import { enhanceControls } from './workspace-ui.js';
 
 const ICONS = {
   globe: '<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/>',
@@ -63,6 +64,7 @@ export function icon(name, cls = '') {
 }
 
 export function hydrateIcons(root = document) {
+  enhanceControls(root);
   root.querySelectorAll('[data-icon]').forEach((el) => {
     if (el.dataset.iconDone) return;
     el.insertAdjacentHTML('afterbegin', icon(el.dataset.icon));
@@ -106,7 +108,7 @@ export function modal({ title, body, actions = [], width, onClose }) {
     footer.append(h('button', { class: 'btn ' + (a.primary ? 'primary' : '') + (a.danger ? ' danger' : ''), onclick: () => a.onClick ? a.onClick(close) : close() }, a.label));
   }
   const m = h('div', { class: 'modal', style: width ? { width } : null },
-    h('header', {}, title, h('button', { class: 'icon-btn', html: icon('x'), onclick: close })),
+    h('header', {}, h('span', {}, title), h('button', { class: 'icon-btn', title: 'Đóng hộp thoại này', 'aria-label': 'Đóng hộp thoại', html: icon('x'), onclick: close })),
     bodyEl,
     actions.length ? footer : null);
   const back = h('div', { class: 'modal-backdrop' }, m);

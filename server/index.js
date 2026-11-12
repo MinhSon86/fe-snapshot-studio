@@ -8,8 +8,11 @@ import { capture, renderPng } from './capture.js';
 import { startJob, getJob, stopJob, stopAll, listDir, detect } from './runner.js';
 import { listProjects, loadProject, saveProject, deleteProject, newId, projectFilePath } from './projects.js';
 import { closeBrowser } from './browser.js';
+import { CaptureSessions } from './sessions.js';
+import { browserApi } from './browser-api.js';
 
 const app = express();
+const sessions = new CaptureSessions();
 app.use(express.json({ limit: '500mb' }));
 app.use(express.static(PUBLIC_DIR));
 
@@ -21,6 +24,8 @@ const wrap = (fn) => async (req, res) => {
 };
 
 /* ---- snapshot ---- */
+app.use('/api/browser', browserApi(sessions));
+
 app.post('/api/capture', wrap(async (req, res) => {
   const { url, width, height, wait } = req.body || {};
   if (!url) return res.status(400).json({ error: 'Thiếu URL' });
@@ -84,6 +89,6 @@ app.listen(port, '127.0.0.1', () => {
   }
 });
 
-const shutdown = async () => { stopAll(); await closeBrowser(); process.exit(0); };
+const shutdown = async () => { stopAll(); await sessions.closeAll(); await closeBrowser(); process.exit(0); };
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);

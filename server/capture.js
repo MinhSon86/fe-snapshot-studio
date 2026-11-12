@@ -2,6 +2,7 @@
 // serialises the live DOM + all CSS into ONE self-contained, script-free HTML file
 // (images/fonts inlined as data URIs) that can be edited offline and carried anywhere.
 import { getBrowser } from './browser.js';
+import { validateViewportWidth } from '../public/js/viewport.js';
 
 const MAX_ASSET_BYTES = 5 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 80 * 1024 * 1024;
@@ -152,7 +153,8 @@ function collectInPage() {
     if (tag === 'input') {
       const t = (L.type || '').toLowerCase();
       if (t === 'checkbox' || t === 'radio') { if (L.checked) C.setAttribute('checked', ''); else C.removeAttribute('checked'); }
-      else if (t !== 'file' && t !== 'password') C.setAttribute('value', L.value);
+      else if (t === 'password' || t === 'file') C.removeAttribute('value');
+      else C.setAttribute('value', L.value);
     }
     if (tag === 'textarea') C.textContent = L.value;
     if (tag === 'select') {
@@ -222,20 +224,35 @@ function finalizeInPage({ sheetCss, map, sourceUrl }) {
   return '<!DOCTYPE html>\n' + clone.outerHTML;
 }
 
-export async function capture({ url, width = 1440, height = 900, wait = 1200, onProgress = () => {} }) {
-  if (!/^https?:\/\//i.test(url) && !/^file:\/\//i.test(url)) url = 'https://' + url;
-  const browser = await getBrowser();
-  const context = await browser.newContext({ viewport: { width, height }, ignoreHTTPSErrors: true, deviceScaleFactor: 1 });
-  const page = await context.newPage();
-  const cache = new Map(); // url -> { body: Buffer, type }
-  page.on('response', async (res) => {
+// Cache only visual resources, never login requests or browser storage.
+export function trackResources(page) {
+  const cache = new Map();
+  let bytes = 0;
+  let active = true;
+  const listener = async (res) => {
     try {
-      const type = res.request().resourceType();
-      if (!['stylesheet', 'image', 'font'].includes(type) || res.status() >= 400) return;
+      if (!['stylesheet', 'image', 'font'].includes(res.request().resourceType()) || res.status() >= 400) return;
       const body = await res.body();
-      if (body.length <= MAX_ASSET_BYTES) cache.set(res.url(), { body, type: res.headers()['content-type'] || '' });
+      if (!active || body.length > MAX_ASSET_BYTES) return;
+      const previous = cache.get(res.url());
+      if (bytes - (previous?.body.length || 0) + body.length > MAX_TOTAL_BYTES) return;
+      bytes += body.length - (previous?.body.length || 0);
+      cache.set(res.url(), { body, type: res.headers()['content-type'] || '' });
     } catch { /* redirects / aborted */ }
-  });
+  };
+  page.on('response', listener);
+  return { cache, stop() { active = false; page.off('response', listener); cache.clear(); } };
+}
+
+export async function capture({ url, width = 1440, height = 900, wait = 1200, onProgress = () => {}, page: existingPage, resourceCache }) {
+  width = validateViewportWidth(existingPage?.viewportSize()?.width || width);
+  if (!existingPage && !/^https?:\/\//i.test(url) && !/^file:\/\//i.test(url)) url = 'https://' + url;
+  const context = existingPage ? existingPage.context() : await (await getBrowser()).newContext({ viewport: { width, height }, ignoreHTTPSErrors: true, deviceScaleFactor: 1 });
+  const page = existingPage || await context.newPage();
+  const tracker = resourceCache ? null : trackResources(page);
+  const cache = resourceCache || tracker.cache;
+  const scrollPosition = existingPage ? await page.evaluate(() => ({ x: scrollX, y: scrollY })) : null;
+  if (existingPage) width = page.viewportSize()?.width || width;
 
   let total = 0;
   const dataUris = new Map();
@@ -302,7 +319,7 @@ export async function capture({ url, width = 1440, height = 900, wait = 1200, on
 
   try {
     onProgress('Đang tải trang...');
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    if (!existingPage) await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await page.waitForLoadState('load', { timeout: 30000 }).catch(() => {});
     await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
     onProgress('Đang cuộn trang để tải nội dung...');
@@ -333,7 +350,10 @@ export async function capture({ url, width = 1440, height = 900, wait = 1200, on
       sizeBytes: Buffer.byteLength(html),
     };
   } finally {
-    await context.close().catch(() => {});
+    tracker?.stop();
+    if (existingPage) {
+      await page.evaluate(({ x, y }) => { delete window.__fes; window.scrollTo(x, y); }, scrollPosition).catch(() => {});
+    } else await context.close().catch(() => {});
   }
 }
 

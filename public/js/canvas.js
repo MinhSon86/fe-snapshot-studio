@@ -1,6 +1,7 @@
 // Canvas: hosts the snapshot inside an iframe and turns it into an editable,
 // drag-and-drop design surface (selection, hover, inline text editing, resizing,
 // reordering, inserting, undo/redo).
+import { MIN_VIEWPORT_WIDTH, MAX_VIEWPORT_WIDTH } from './viewport.js';
 
 const VOID = new Set(['img', 'input', 'br', 'hr', 'meta', 'link', 'area', 'base', 'col', 'embed', 'source', 'track', 'wbr',
   'svg', 'video', 'audio', 'iframe', 'canvas', 'textarea', 'select', 'picture', 'object', 'progress', 'meter']);
@@ -168,7 +169,12 @@ export class Canvas {
   }
 
   /* ---------------- layout / zoom ---------------- */
-  setViewport(width) { this.width = Math.max(240, Math.min(3840, Math.round(width))); this.layout(); this.emit('viewport', this.width); }
+  setViewport(width) {
+    if (!Number.isFinite(width)) return;
+    this.width = Math.max(MIN_VIEWPORT_WIDTH, Math.min(MAX_VIEWPORT_WIDTH, Math.round(width)));
+    this.layout();
+    this.emit('viewport', this.width);
+  }
   setZoom(mode) { this.zoomMode = mode; this.layout(); }
   layout() {
     const { area, stage, wrap, frame } = this.els;

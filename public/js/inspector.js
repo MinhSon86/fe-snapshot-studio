@@ -3,6 +3,7 @@
 // and raw HTML of the currently selected element.
 
 import { h, icon, hydrateIcons, colorToHex, fileToDataUrl, pickFile, modal, toast } from './ui.js';
+import { collapseSections } from './workspace-ui.js';
 
 const FONTS = [
   ['', 'Mặc định (kế thừa)'],
@@ -41,6 +42,7 @@ export class Inspector {
   constructor(root, canvas) {
     this.root = root;
     this.canvas = canvas;
+    this.sectionState = new Map();
     canvas.on('select', (el) => this.render(el));
     canvas.on('load', () => this.render(null));
     this.render(null);
@@ -113,11 +115,11 @@ export class Inspector {
         h('code', {}, `<${tag}>`),
         el.id ? h('span', { style: { color: 'var(--muted)', fontSize: '12px' } }, '#' + el.id) : null,
         h('span', { class: 'size' }, `${Math.round(rect.width)} × ${Math.round(rect.height)}`)),
-      !isBody ? h('div', { class: 'row', style: { marginTop: '10px', marginBottom: 0 } },
+      !isBody ? h('div', { class: 'row quick-actions', style: { marginTop: '10px', marginBottom: 0 } },
         h('button', { class: 'btn sm', onclick: () => this.canvas.action('parent'), title: 'Chọn phần tử cha (Esc)' }, h('span', { html: icon('arrowUpLeft') }), 'Cha'),
         h('button', { class: 'btn sm', onclick: () => this.canvas.action('duplicate'), title: 'Nhân bản (Ctrl+D)' }, h('span', { html: icon('copy') }), 'Bản sao'),
         h('button', { class: 'btn sm', onclick: () => this.canvas.action('hide'), title: 'Ẩn/Hiện' }, h('span', { html: icon('eyeOff') }), 'Ẩn'),
-        h('button', { class: 'btn sm danger', style: { flex: 'none' }, onclick: () => this.canvas.action('delete'), title: 'Xoá (Del)' }, h('span', { html: icon('trash') }))) : null);
+        h('button', { class: 'btn sm danger', style: { flex: 'none' }, onclick: () => this.canvas.action('delete'), title: 'Xoá (Del)' }, h('span', { html: icon('trash') }), 'Xóa')) : null);
     this.root.append(headSec);
 
     /* ---- 2. Content (Text / Image / Link / Input / HTML) ---- */
@@ -205,11 +207,11 @@ export class Inspector {
 
     if (!isBody) {
       contentSec.append(
-        h('div', { class: 'row', style: { marginBottom: 0 } },
+        h('details', { class: 'inline-disclosure' }, h('summary', { title: 'Mở các thao tác sửa mã HTML và lưu phần tử thành khối mẫu' }, 'Nâng cao'), h('div', { class: 'row', style: { marginBottom: 0 } },
           h('button', { class: 'btn sm', onclick: () => this.openHtmlEditor(el) },
             h('span', { html: icon('code') }), 'Sửa HTML'),
           h('button', { class: 'btn sm', onclick: () => this.canvas.action('component') },
-            h('span', { html: icon('star') }), 'Lưu khối mẫu')));
+            h('span', { html: icon('star') }), 'Lưu khối mẫu'))));
     }
     this.root.append(contentSec);
 
@@ -397,6 +399,7 @@ export class Inspector {
       h('div', { class: 'row', style: { marginBottom: 0 } }, h('span', { class: 'lbl' }, 'Độ mờ'), opRange, opLabel));
     this.root.append(fxSec);
 
+    collapseSections(this.root, this.sectionState, ['Nội dung', 'Chữ & Kiểu chữ']);
     hydrateIcons(this.root);
   }
 

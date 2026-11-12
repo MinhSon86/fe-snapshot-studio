@@ -41,46 +41,59 @@
   <!-- ============ EDITOR ============ -->
   <div id="editor" class="screen hidden">
     <header class="topbar">
-      <button class="icon-btn" id="btn-home" title="Về trang chủ" data-icon="home"></button>
-      <input id="project-name" class="project-name" spellcheck="false">
-      <div class="tb-group">
-        <button class="icon-btn" id="btn-undo" title="Hoàn tác (Ctrl+Z)" data-icon="undo"></button>
-        <button class="icon-btn" id="btn-redo" title="Làm lại (Ctrl+Shift+Z)" data-icon="redo"></button>
+      <div class="toolbar-row toolbar-project">
+        <button class="icon-btn" id="btn-home" title="Về trang chủ" data-icon="home"></button>
+        <input id="project-name" class="project-name" spellcheck="false" aria-label="Tên dự án" title="Đổi tên dự án; thay đổi được lưu tự động">
+        <div class="spacer"></div>
+        <span id="save-state" class="save-state" role="status"></span>
+        <button class="btn" id="btn-capture-url" title="Mở website bằng profile dự án và chụp thêm một trang">+ URL</button>
+        <button class="btn ghost" id="btn-preview" title="Xem trang hiện tại không có công cụ chỉnh sửa"><span data-icon="eye"></span>Xem trước</button>
+        <div class="dropdown">
+          <button class="btn primary" id="btn-export" aria-expanded="false" aria-controls="export-menu" title="Chọn xuất trang thành HTML, ảnh PNG hoặc lưu cả dự án"><span data-icon="download"></span>Xuất</button>
+          <div class="dropdown-menu" id="export-menu">
+            <button data-export="html" title="Lưu trang đang chỉnh sửa thành file HTML độc lập">Trang hiện tại → HTML</button>
+            <button data-export="png" title="Xuất ảnh PNG toàn bộ chiều dài trang">Trang hiện tại → ảnh PNG</button>
+            <button data-export="fesnap" title="Lưu tất cả trang và tài nguyên để mở tiếp trong Studio">Cả dự án → .fesnap</button>
+          </div>
+        </div>
       </div>
-      <div class="tb-group" id="viewport-group">
-        <button class="icon-btn" data-vp="1440" title="Desktop 1440" data-icon="monitor"></button>
-        <button class="icon-btn" data-vp="1024" title="Laptop / Tablet ngang 1024" data-icon="laptop"></button>
-        <button class="icon-btn" data-vp="768" title="Tablet 768" data-icon="tablet"></button>
-        <button class="icon-btn" data-vp="390" title="Mobile 390" data-icon="phone"></button>
-        <input id="vp-width" class="num-input" title="Chiều rộng khung (px)">
-      </div>
-      <div class="tb-group">
-        <select id="zoom" title="Thu phóng">
-          <option value="fit">Vừa khung</option>
-          <option value="0.25">25%</option><option value="0.5">50%</option><option value="0.75">75%</option>
-          <option value="1">100%</option><option value="1.5">150%</option>
-        </select>
-      </div>
-      <div class="spacer"></div>
-      <span id="save-state" class="save-state"></span>
-      <button class="btn ghost" id="btn-preview"><span data-icon="eye"></span>Xem trước</button>
-      <div class="dropdown">
-        <button class="btn primary" id="btn-export"><span data-icon="download"></span>Xuất</button>
-        <div class="dropdown-menu" id="export-menu">
-          <button data-export="html">Trang hiện tại → HTML</button>
-          <button data-export="png">Trang hiện tại → Ảnh PNG</button>
-          <button data-export="fesnap">Cả project → .fesnap (mang sang máy khác)</button>
+      <div class="toolbar-row toolbar-view">
+        <div class="tb-group panel-switches" aria-label="Hiển thị công cụ">
+          <button class="btn sm" id="btn-toggle-left" data-panel-toggle="left" aria-controls="navigation-panel" aria-expanded="true" title="Ẩn hoặc mở panel Trang, Lớp, Chèn và Theme">Danh mục</button>
+          <button class="btn sm" id="btn-toggle-right" data-panel-toggle="right" aria-controls="properties-panel" aria-expanded="true" title="Ẩn hoặc mở thuộc tính của phần tử đang chọn">Thuộc tính</button>
+          <button class="btn sm" id="btn-focus-mode" aria-pressed="false" title="Ẩn cả hai panel để mở rộng canvas; bấm lại để khôi phục bố cục">Tập trung</button>
+        </div>
+        <div class="tb-group" aria-label="Lịch sử chỉnh sửa">
+          <button class="icon-btn" id="btn-undo" title="Hoàn tác (Ctrl+Z)" data-icon="undo"></button>
+          <button class="icon-btn" id="btn-redo" title="Làm lại (Ctrl+Shift+Z)" data-icon="redo"></button>
+        </div>
+        <div class="tb-group" id="viewport-group">
+          <select id="vp-preset" aria-label="Kích thước khung nhìn" title="Chọn chiều rộng trang để xem bố cục trên điện thoại, tablet hoặc màn hình lớn">
+            <option value="390">Mobile · 390</option><option value="768">Tablet · 768</option>
+            <option value="1024">Laptop · 1024</option><option value="1440" selected>Desktop · 1440</option>
+            <option value="1920">Full HD · 1920</option><option value="2560">QHD · 2560</option>
+            <option value="3840">4K · 3840</option><option value="5120">5K · 5120</option>
+            <option value="7680">8K · 7680</option><option value="custom">Tùy chỉnh</option>
+          </select>
+          <input id="vp-width" class="num-input" type="number" min="240" max="7680" step="1" aria-label="Chiều rộng khung (px)" title="Nhập chiều rộng trang từ 240 đến 7680px"><span class="viewport-unit">px</span>
+        </div>
+        <div class="tb-group">
+          <select id="zoom" aria-label="Thu phóng" title="Phóng to hoặc thu nhỏ canvas; Vừa khung giúp thấy toàn bộ chiều rộng">
+            <option value="fit">Vừa khung</option>
+            <option value="0.25">25%</option><option value="0.5">50%</option><option value="0.75">75%</option>
+            <option value="1">100%</option><option value="1.5">150%</option>
+          </select>
         </div>
       </div>
     </header>
 
     <div class="workspace">
-      <aside class="left-panel">
+      <aside class="left-panel" id="navigation-panel" aria-label="Danh mục thiết kế"><div class="panel-heading"><strong>Danh mục</strong><button class="icon-btn" data-panel-toggle="left" aria-controls="navigation-panel" aria-expanded="true" title="Thu gọn danh mục để mở rộng canvas" aria-label="Thu gọn danh mục">‹</button></div>
         <nav class="tabs" id="left-tabs">
-          <button data-tab="pages" class="active">Trang</button>
-          <button data-tab="layers">Lớp</button>
-          <button data-tab="insert">Chèn</button>
-          <button data-tab="theme">Theme</button>
+          <button data-tab="pages" aria-pressed="true" title="Quản lý, thêm và chuyển giữa các trang trong dự án" class="active">Trang</button>
+          <button data-tab="layers" aria-pressed="false" title="Xem cấu trúc phần tử, chọn hoặc ẩn từng lớp">Lớp</button>
+          <button data-tab="insert" aria-pressed="false" title="Thêm khối giao diện có sẵn hoặc khối mẫu đã lưu">Chèn</button>
+          <button data-tab="theme" aria-pressed="false" title="Đổi màu, phông chữ và nội dung trên toàn trang">Theme</button>
         </nav>
         <div class="tab-body" id="tab-pages"></div>
         <div class="tab-body hidden" id="tab-layers"></div>
@@ -115,7 +128,7 @@
         <div class="canvas-empty hidden" id="canvas-empty">Chưa có trang nào</div>
       </main>
 
-      <aside class="right-panel" id="inspector"></aside>
+      <aside class="right-panel" id="properties-panel" aria-label="Thuộc tính phần tử"><div class="panel-heading"><strong>Thuộc tính</strong><button class="icon-btn" data-panel-toggle="right" aria-controls="properties-panel" aria-expanded="true" title="Thu gọn thuộc tính để mở rộng canvas" aria-label="Thu gọn thuộc tính">›</button></div><div id="inspector"></div></aside>
     </div>
   </div>
 
